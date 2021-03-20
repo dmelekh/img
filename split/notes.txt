@@ -1,0 +1,38 @@
+
+
+python threshold
+
+
+
+adjust py3_venv in vsCode
+https://code.visualstudio.com/docs/python/environments
+https://stackoverflow.com/questions/54106071/how-to-setup-virtual-environment-for-python-in-vs-code
+Ctrl+Shift+P
+Python: Select Interpreter
+choose ~/py3_venvs/ds/bin/python
+
+
+
+python3 -m venv ~/py3_venvs/ds
+cd ~/py3_venvs/ds/bin
+source ./activate
+deactivate
+
+python3 -m pip --version
+
+https://pypi.org/project/opencv-python/
+pip install opencv-contrib-python
+
+
+
+Image Processing in OpenCV 
+https://docs.opencv.org/3.4/d2/d96/tutorial_py_table_of_contents_imgproc.html
+
+contours in openCV
+https://docs.opencv.org/3.4/d3/d05/tutorial_py_table_of_contents_contours.html
+	Orientation
+
+Geometric Transformations of Images 
+https://docs.opencv.org/3.4/da/d6e/tutorial_py_geometric_transformations.html
+
+

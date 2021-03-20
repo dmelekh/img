@@ -1,7 +1,7 @@
 
 
-python threshold
-
+threshold
+https://docs.opencv.org/master/d7/d4d/tutorial_py_thresholding.html
 
 
 adjust py3_venv in vsCode

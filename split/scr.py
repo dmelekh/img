@@ -16,8 +16,13 @@ img = cv.imread(pict_filepath,0)
 
 ret,th1 = cv.threshold(img,230,255,cv.THRESH_BINARY)
 
+with open('split/log.txt', 'w') as f:
+    f.writelines([''.join(str(i))+'\n' for i in th1.tolist()])
+
+print(len(th1), len(th1[0]))
+
 plt.imshow(th1,'gray')
 plt.xticks([])
 plt.yticks([])
 
-plt.show()
+# plt.show()

@@ -1,4 +1,12 @@
 
+python opencv
+https://docs.opencv.org/master/d6/d00/tutorial_py_root.html
+https://docs.opencv.org/master/d3/db4/tutorial_py_watershed.html
+
+opencv rectangle detection
+python drawContours to threshold result
+convex hull
+https://learnopencv.com/convex-hull-using-opencv-in-python-and-c/
 
 threshold
 https://docs.opencv.org/master/d7/d4d/tutorial_py_thresholding.html

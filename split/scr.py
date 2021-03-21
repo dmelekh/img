@@ -24,6 +24,15 @@ def get_image(img_filename):
 def get_threshold(img, threshold_value):
     imgGry = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     ret, th1 = cv.threshold(imgGry, threshold_value, 255, cv.THRESH_BINARY)
+
+    # ret, th1 = cv.threshold(imgGry, threshold_value, 255, cv.THRESH_TOZERO)
+
+    # ret, th1 = cv.threshold(imgGry, threshold_value, 255, cv.THRESH_TRUNC)
+
+    # ret, th1 = cv.threshold(imgGry, threshold_value, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+
+    # blur = cv.GaussianBlur(imgGry,(5,5),0)
+    # ret, th1 = cv.threshold(blur, threshold_value, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
     return th1
 
 
@@ -145,7 +154,7 @@ def split_image(img_filename, global_index, draw):
         threshold = get_threshold(img, threshold_level)
         rectangles = get_rectangles(threshold, 0.05)
         rectangles_num.append(len(rectangles))
-    # print(f'   rectangles_num: {rectangles_num}')
+    print(f'   rectangles_num: {rectangles_num}')
     threshold_level = threshold_level_min + rectangles_num.index(max(rectangles_num))
     print(f'threshold_level: {threshold_level}')
     threshold = get_threshold(img, threshold_level)

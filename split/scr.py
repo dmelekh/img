@@ -27,7 +27,7 @@ def get_threshold(img, threshold_value):
     return th1
 
 
-def get_rectangles(threshold):
+def get_rectangles(threshold, min_relative_size):
     contours, hierarchy = cv.findContours(
         threshold, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     height, width = threshold.shape
@@ -35,7 +35,7 @@ def get_rectangles(threshold):
     for contour in contours:
         bbox = cv.boundingRect(contour)
         x, y, w, h = bbox
-        if w < width * 0.01 or h < height * 0.01:
+        if w < width * min_relative_size or h < height * min_relative_size:
             continue
         approx = cv.approxPolyDP(
             contour, 0.01 * cv.arcLength(contour, True), True)
@@ -54,15 +54,23 @@ def vector_coords(pt2, pt1):
     y = pt2[0][1]-pt1[0][1]
     return x, y
 
-def avg_vec_via_pts(v1pt2, v1pt1, v2pt2, v2pt1):
+def vec_avg_via_pts(v1pt2, v1pt1, v2pt2, v2pt1):
     v1 = vector_coords(v1pt2, v1pt1)
     v2 = vector_coords(v2pt2, v2pt1)
-    return avg_vec(v1, v2)
+    return vec_avg(v1, v2)
 
-def avg_vec(v1, v2):
+def vec_avg(v1, v2):
     return 0.5*(v1[0] + v2[0]), 0.5*(v1[1] + v2[1])
 
-def norm_vec(v):
+def vec_sum_via_pts(v1pt2, v1pt1, v2pt2, v2pt1):
+    v1 = vector_coords(v1pt2, v1pt1)
+    v2 = vector_coords(v2pt2, v2pt1)
+    return vec_sum(v1, v2)
+
+def vec_sum(v1, v2):
+    return (v1[0] + v2[0]), (v1[1] + v2[1])
+
+def vec_norm(v):
     mod = math.sqrt(v[0]*v[0] + v[1]*v[1])
     return v[0]/mod, v[1]/mod
 
@@ -92,10 +100,11 @@ def rotate_and_crop(img, rectangle, indent):
     rectangle_str_repr = re.sub('[\t\r\n]+', ', ', str(rectangle))
     print(
         f'rectangle_str_repr: {rectangle_str_repr};\n    rectangle dx: {basic_dx};\n    rectangle dy: {basic_dy}')
-    vx = norm_vec(avg_vec_via_pts(rectangle[1], rectangle[0], rectangle[2], rectangle[3]))
-    vy = norm_vec(avg_vec_via_pts(rectangle[3], rectangle[0], rectangle[2], rectangle[1]))
+    vx = (vec_sum_via_pts(rectangle[1], rectangle[0], rectangle[2], rectangle[3]))
+    vy = (vec_sum_via_pts(rectangle[3], rectangle[0], rectangle[2], rectangle[1]))
     vy_to_x = vy[1], -vy[0]
-    x_axis = avg_vec(vx, vy_to_x)
+    x_axis = vec_norm(vec_sum(vx, vy_to_x))
+
     rotation_angle = 0.
     if abs(x_axis[0]) > 0.0000001:
         rotation_angle = math.atan(x_axis[1]/x_axis[0])/math.pi*180.
@@ -107,33 +116,51 @@ def rotate_and_crop(img, rectangle, indent):
     cropped = dst[base_pt[1]-indent:int(base_pt[1]+basic_dy)+indent+1, base_pt[0]-indent:int(base_pt[0]+basic_dx)+indent+1]
     return cropped
 
+def draw_image(img, threshold, rectangles):
+    for i in range(1, len(rectangles)):
+        rectangle = rectangles[i]
+        color = list(np.random.random(size=3) * 255)
+        cv.drawContours(img, [rectangle], -1, color, 5)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.imshow(threshold, 'gray')
+    ax2.imshow(img)
+    plt.xticks([])
+    plt.yticks([])
+
+    plt.show()
+
+def split_image(img_filename, global_index, draw):
+    dot_index = img_filename.rfind('.')
+    file_basename = img_filename[0:dot_index]
+    file_ext = img_filename[dot_index:]
+    if not os.path.exists(file_basename):
+        os.mkdir(file_basename)
+    print(f'  basename = {file_basename}; file_ext = {file_ext}')
+    img = get_image(img_filename)
+    rectangles_num = []
+    threshold_level_min = 205
+    threshold_level_max = 245
+    for threshold_level in range(threshold_level_min, threshold_level_max):
+        threshold = get_threshold(img, threshold_level)
+        rectangles = get_rectangles(threshold, 0.05)
+        rectangles_num.append(len(rectangles))
+    print(f'   rectangles_num: {rectangles_num}')
+    threshold_level = threshold_level_min + rectangles_num.index(max(rectangles_num))
+    print(f'   threshold_level: {threshold_level}')
+    threshold = get_threshold(img, threshold_level)
+    rectangles = get_rectangles(threshold, 0.05)
+    for i in range(1, len(rectangles)):
+        rectangle = rectangles[i]
+        set_top_left_point_index0(rectangle)
+        res = rotate_and_crop(img, rectangle, 5)
+        target = os.path.join(file_basename, str(global_index) + file_ext)
+        cv.imwrite(target, res)
+        global_index += 1
+    if draw:
+        draw_image(img, threshold, rectangles)
+    return global_index
+
 
 test_img_filename = get_test_filename()
-dot_index = test_img_filename.rfind('.')
-file_basename = test_img_filename[0:dot_index]
-file_ext = test_img_filename[dot_index:]
-print(f'  basename = {file_basename}; file_ext = {file_ext}')
-img = get_image(test_img_filename)
-threshold = get_threshold(img, 220)
-rectangles = get_rectangles(threshold)
-print(f'rectangles number: {len(rectangles)}')
-for i in range(1, len(rectangles)):
-    rectangle = rectangles[i]
-    set_top_left_point_index0(rectangle)
-    res = rotate_and_crop(img, rectangle, 5)
-    target = file_basename + str(i) + file_ext
-    cv.imwrite(target, res)
-
-for i in range(1, len(rectangles)):
-    rectangle = rectangles[i]
-    color = list(np.random.random(size=3) * 255)
-    cv.drawContours(img, [rectangle], -1, color, 5)
-
-
-fig, (ax1, ax2) = plt.subplots(1, 2)
-ax1.imshow(threshold, 'gray')
-ax2.imshow(img)
-plt.xticks([])
-plt.yticks([])
-
-plt.show()
+split_image(test_img_filename, 0, True)

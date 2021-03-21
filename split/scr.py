@@ -49,8 +49,26 @@ def r2(pt):
     return math.pow(pt[0][0], 2.0) + math.pow(pt[0][1], 2.0)
 
 
+def vector_coords(pt2, pt1):
+    x = pt2[0][0]-pt1[0][0]
+    y = pt2[0][1]-pt1[0][1]
+    return x, y
+
+def avg_vec_via_pts(v1pt2, v1pt1, v2pt2, v2pt1):
+    v1 = vector_coords(v1pt2, v1pt1)
+    v2 = vector_coords(v2pt2, v2pt1)
+    return avg_vec(v1, v2)
+
+def avg_vec(v1, v2):
+    return 0.5*(v1[0] + v2[0]), 0.5*(v1[1] + v2[1])
+
+def norm_vec(v):
+    mod = math.sqrt(v[0]*v[0] + v[1]*v[1])
+    return v[0]/mod, v[1]/mod
+
 def vector_length(pt2, pt1):
-    return math.sqrt(math.pow(pt2[0][0]-pt1[0][0], 2.0) + math.pow(pt2[0][1]-pt1[0][1], 2.0))
+    vx, vy = vector_coords(pt2, pt1)
+    return math.sqrt(math.pow(vx, 2.0) + math.pow(vy, 2.0))
 
 
 def set_top_left_point_index0(rectangle):
@@ -67,30 +85,49 @@ def set_top_left_point_index0(rectangle):
         rectangle[0] = buffer
 
 
-def rotate_and_crop(img, rectangle):
+def rotate_and_crop(img, rectangle, indent):
     basic_pt = rectangle[0]
-    basic_di = 0.5 * \
-        (vector_length(rectangle[3], rectangle[0]) +
-         vector_length(rectangle[2], rectangle[1]))
-    basic_dj = 0.5 * \
-        (vector_length(rectangle[1], rectangle[0]) +
-         vector_length(rectangle[3], rectangle[2]))
+    basic_dx = max([vector_length(rectangle[1], rectangle[0]), vector_length(rectangle[3], rectangle[2])])
+    basic_dy = max([vector_length(rectangle[3], rectangle[0]), vector_length(rectangle[2], rectangle[1])])
     rectangle_str_repr = re.sub('[\t\r\n]+', ', ', str(rectangle))
     print(
-        f'rectangle_str_repr: {rectangle_str_repr};\n    rectangle side i: {basic_di};\n    rectangle side j: {basic_dj}')
+        f'rectangle_str_repr: {rectangle_str_repr};\n    rectangle dx: {basic_dx};\n    rectangle dy: {basic_dy}')
+    vx = norm_vec(avg_vec_via_pts(rectangle[1], rectangle[0], rectangle[2], rectangle[3]))
+    vy = norm_vec(avg_vec_via_pts(rectangle[3], rectangle[0], rectangle[2], rectangle[1]))
+    vy_to_x = vy[1], -vy[0]
+    x_axis = avg_vec(vx, vy_to_x)
+    rotation_angle = 0.
+    if abs(x_axis[0]) > 0.0000001:
+        rotation_angle = math.atan(x_axis[1]/x_axis[0])/math.pi*180.
+    print(f'   vx: {vx}; vy: {vy}; x_axis: {x_axis}; rotation_angle: {rotation_angle}')
+    rows, cols, color = img.shape
+    base_pt = rectangle[0][0][0], rectangle[0][0][1]
+    M = cv.getRotationMatrix2D(base_pt,rotation_angle,1)
+    dst = cv.warpAffine(img,M,(cols, rows))
+    cropped = dst[base_pt[1]-indent:int(base_pt[1]+basic_dy)+indent+1, base_pt[0]-indent:int(base_pt[0]+basic_dx)+indent+1]
+    return cropped
 
 
 test_img_filename = get_test_filename()
+dot_index = test_img_filename.rfind('.')
+file_basename = test_img_filename[0:dot_index]
+file_ext = test_img_filename[dot_index:]
+print(f'  basename = {file_basename}; file_ext = {file_ext}')
 img = get_image(test_img_filename)
 threshold = get_threshold(img, 220)
 rectangles = get_rectangles(threshold)
 print(f'rectangles number: {len(rectangles)}')
-for rectangle in rectangles:
+for i in range(1, len(rectangles)):
+    rectangle = rectangles[i]
     set_top_left_point_index0(rectangle)
+    res = rotate_and_crop(img, rectangle, 5)
+    target = file_basename + str(i) + file_ext
+    cv.imwrite(target, res)
+
+for i in range(1, len(rectangles)):
+    rectangle = rectangles[i]
     color = list(np.random.random(size=3) * 255)
     cv.drawContours(img, [rectangle], -1, color, 5)
-    # rotate_and_crop(img, rectangle)
-    
 
 
 fig, (ax1, ax2) = plt.subplots(1, 2)

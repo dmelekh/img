@@ -98,8 +98,8 @@ def rotate_and_crop(img, rectangle, indent):
     basic_dx = max([vector_length(rectangle[1], rectangle[0]), vector_length(rectangle[3], rectangle[2])])
     basic_dy = max([vector_length(rectangle[3], rectangle[0]), vector_length(rectangle[2], rectangle[1])])
     rectangle_str_repr = re.sub('[\t\r\n]+', ', ', str(rectangle))
-    print(
-        f'rectangle_str_repr: {rectangle_str_repr};\n    rectangle dx: {basic_dx};\n    rectangle dy: {basic_dy}')
+    # print(
+    #     f'rectangle_str_repr: {rectangle_str_repr};\n    rectangle dx: {basic_dx};\n    rectangle dy: {basic_dy}')
     vx = (vec_sum_via_pts(rectangle[1], rectangle[0], rectangle[2], rectangle[3]))
     vy = (vec_sum_via_pts(rectangle[3], rectangle[0], rectangle[2], rectangle[1]))
     vy_to_x = vy[1], -vy[0]
@@ -108,7 +108,7 @@ def rotate_and_crop(img, rectangle, indent):
     rotation_angle = 0.
     if abs(x_axis[0]) > 0.0000001:
         rotation_angle = math.atan(x_axis[1]/x_axis[0])/math.pi*180.
-    print(f'   vx: {vx}; vy: {vy}; x_axis: {x_axis}; rotation_angle: {rotation_angle}')
+    # print(f'   vx: {vx}; vy: {vy}; x_axis: {x_axis}; rotation_angle: {rotation_angle}')
     rows, cols, color = img.shape
     base_pt = rectangle[0][0][0], rectangle[0][0][1]
     M = cv.getRotationMatrix2D(base_pt,rotation_angle,1)
@@ -136,7 +136,7 @@ def split_image(img_filename, global_index, draw):
     file_ext = img_filename[dot_index:]
     if not os.path.exists(file_basename):
         os.mkdir(file_basename)
-    print(f'  basename = {file_basename}; file_ext = {file_ext}')
+    # print(f'  basename = {file_basename}; file_ext = {file_ext}')
     img = get_image(img_filename)
     rectangles_num = []
     threshold_level_min = 205
@@ -145,22 +145,19 @@ def split_image(img_filename, global_index, draw):
         threshold = get_threshold(img, threshold_level)
         rectangles = get_rectangles(threshold, 0.05)
         rectangles_num.append(len(rectangles))
-    print(f'   rectangles_num: {rectangles_num}')
+    # print(f'   rectangles_num: {rectangles_num}')
     threshold_level = threshold_level_min + rectangles_num.index(max(rectangles_num))
-    print(f'   threshold_level: {threshold_level}')
+    print(f'threshold_level: {threshold_level}')
     threshold = get_threshold(img, threshold_level)
     rectangles = get_rectangles(threshold, 0.05)
     for i in range(1, len(rectangles)):
         rectangle = rectangles[i]
         set_top_left_point_index0(rectangle)
         res = rotate_and_crop(img, rectangle, 5)
-        target = os.path.join(file_basename, str(global_index) + file_ext)
+        target = os.path.join(file_basename, '{:04d}'.format(global_index) + file_ext)
         cv.imwrite(target, res)
         global_index += 1
     if draw:
         draw_image(img, threshold, rectangles)
     return global_index
 
-
-test_img_filename = get_test_filename()
-split_image(test_img_filename, 0, True)

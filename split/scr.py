@@ -93,13 +93,13 @@ def mirror_point_by_line(line_pt1, line_pt2, src_pt):
 
 
 def process_triangle(triangle):
-    print(f'!!! process_triangle: {np_arr_to_string(triangle)}')
+    # print(f'!!! process_triangle: {np_arr_to_string(triangle)}')
     v = [
         vector_length(triangle[1], triangle[0]),
         vector_length(triangle[2], triangle[1]),
         vector_length(triangle[0], triangle[2])
     ]
-    print(f'!!! process_triangle v: {v}')
+    # print(f'!!! process_triangle v: {v}')
     i_max = v.index(max(v))
     if (i_max == 0):
         m = mirror_point_by_line(triangle[1], triangle[0], triangle[2])
@@ -131,11 +131,11 @@ def process_min_diagonal(rectangle):
     i_min = diagonals.index(min(diagonals))
     if i_min == 0:
         triangle = np.delete(rectangle, 2, 0)
-        print(
-            f'!!! process_min_diagonal triangle: {np_arr_to_string(triangle)}')
+        # print(
+            # f'!!! process_min_diagonal triangle: {np_arr_to_string(triangle)}')
         return process_triangle(triangle)
     triangle = np.delete(rectangle, 3, 0)
-    print(f'!!! process_min_diagonal triangle: {np_arr_to_string(triangle)}')
+    # print(f'!!! process_min_diagonal triangle: {np_arr_to_string(triangle)}')
     return process_triangle(triangle)
 
 
@@ -176,6 +176,12 @@ def set_top_left_point_index0(rectangle):
         for j in range(len(rectangle)-1, 0, -1):
             rectangle[j] = rectangle[j-1]
         rectangle[0] = buffer
+
+def fix_contour_direction_if_needed(rectangle):
+    if rectangle[1][0][1] > rectangle[3][0][1]:
+        buffer = np.copy(rectangle[3])
+        rectangle[3] = rectangle[1]
+        rectangle[1] = buffer
 
 
 def rotate_and_crop(img, rectangle, indent):
@@ -229,24 +235,40 @@ def split_image(img_filename, global_index, draw):
         os.mkdir(file_basename)
     # print(f'  basename = {file_basename}; file_ext = {file_ext}')
     img = get_image(img_filename)
-    rectangles_num = []
+    rectangles_space = []
+    thresholds = []
+    rectangles_sum_area = []
+    rectangles_len = []
     threshold_level_min = 205
     threshold_level_max = 265
     for threshold_level in range(threshold_level_min, threshold_level_max):
         threshold = get_threshold(img, threshold_level)
         rectangles = get_rectangles(threshold, 0.05)
-        rectangles_num.append(len(rectangles))
-    print(f'   rectangles_num: {rectangles_num}')
-    # threshold_level = threshold_level_min + \
-    #     rectangles_num.index(max(rectangles_num))
-    threshold_level = threshold_level_min + len(rectangles_num) - 1 - rectangles_num[::-1].index(max(rectangles_num))
-    print(f'threshold_level: {threshold_level}')
-    threshold = get_threshold(img, threshold_level)
-    rectangles = get_rectangles(threshold, 0.05)
+        thresholds.append(threshold)
+        rectangles_space.append(rectangles)
+        rectangles_len.append(len(rectangles))
+        rectangles_sum_area.append(sum(
+            [vector_length(rec[1], rec[0])*vector_length(rec[2], rec[1]) for rec in rectangles]
+        ))
+    print(f'   rectangles_num: {rectangles_len}')
+    max_rectangles_len = max(rectangles_len)
+    for i in range(len(rectangles_space)):
+        if (len(rectangles_space[i]) < max_rectangles_len):
+            rectangles_sum_area[i] = -1.0
+
+    i_of_max_len_and_area = rectangles_sum_area.index(max(rectangles_sum_area))
+    rectangles = rectangles_space[i_of_max_len_and_area]
+    threshold = thresholds[i_of_max_len_and_area]
+
+    print(f'   i_of_max_len_and_area = {i_of_max_len_and_area}')
+    print(f'   threshold_level = {threshold_level_min + i_of_max_len_and_area}')
+
     for i in range(1, len(rectangles)):
         rectangle = rectangles[i]
         set_top_left_point_index0(rectangle)
-        res = rotate_and_crop(img, rectangle, 5)
+        fix_contour_direction_if_needed(rectangle)
+        print(f'   rectangle: {np_arr_to_string(rectangle)}')
+        res = rotate_and_crop(img, rectangle, 10)
         target = os.path.join(
             file_basename, '{:04d}'.format(global_index) + file_ext)
         cv.imwrite(target, res)

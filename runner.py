@@ -21,4 +21,4 @@ def split_file():
     global_index = split_image(file, global_index, True)
 
 if __name__ == "__main__" and __package__ is None:
-    split_file()
+    split_dir()

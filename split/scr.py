@@ -229,11 +229,15 @@ def draw_image(img, threshold, rectangles):
 
 def split_image(img_filename, global_index, draw):
     dot_index = img_filename.rfind('.')
-    file_basename = img_filename[0:dot_index]
+    file_basename_full = img_filename[0:dot_index]
+    file_basename = os.path.basename(img_filename)[0 : os.path.basename(img_filename).rfind('.')]
     file_ext = img_filename[dot_index:]
-    if not os.path.exists(file_basename):
-        os.mkdir(file_basename)
-    # print(f'  basename = {file_basename}; file_ext = {file_ext}')
+    target_dir = os.path.join(os.path.split(img_filename)[0], 'split')
+    # if not os.path.exists(file_basename_full):
+    #     os.mkdir(file_basename_full)
+    if not os.path.exists(target_dir):
+        os.mkdir(target_dir)
+    # print(f'  basename = {file_basename_full}; file_ext = {file_ext}')
     img = get_image(img_filename)
     rectangles_space = []
     thresholds = []
@@ -269,8 +273,11 @@ def split_image(img_filename, global_index, draw):
         fix_contour_direction_if_needed(rectangle)
         print(f'   rectangle: {np_arr_to_string(rectangle)}')
         res = rotate_and_crop(img, rectangle, 10)
+        # target = os.path.join(
+            # file_basename_full, '{:04d}'.format(global_index) + file_ext)
         target = os.path.join(
-            file_basename, '{:04d}'.format(global_index) + file_ext)
+            target_dir, file_basename + '-{:04d}'.format(global_index) + file_ext)
+        print(f'target: {target}')
         cv.imwrite(target, res)
         global_index += 1
     if draw:
